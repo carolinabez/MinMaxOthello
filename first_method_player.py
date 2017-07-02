@@ -2,6 +2,8 @@ class FirstMethodPlayer:
     def __init__(self, color):
         self.color = color
 
+
+
     def evaluator(self, stateBoard):
         weights = [10,801.724,382.026,78.922,74.396,10]
         b = 0
@@ -42,9 +44,9 @@ class FirstMethodPlayer:
                     i=-line+8
                 if col>4:
                     j=-col+8
-                if stateBoard.get_square_color(line,col) == stateBoard.WHITE:
+                if (stateBoard.get_square_color(line,col) == stateBoard.WHITE):
                     sigma = -1
-                elif stateBoard.get_square_color(line,col) == stateBoard.BLACK:
+                elif (stateBoard.get_square_color(line,col) == stateBoard.BLACK):
                     sigma = 1
                 d+=sigma*V[i][j]
         ck = [p, c, l, m, f, d]
@@ -54,15 +56,25 @@ class FirstMethodPlayer:
         return value
 
 
-    def fs_alphabeta(self,move,stateBoard, depth, alpha, beta, search_counter,player_max):
-        #from copy import copy
 
+
+
+
+
+
+
+
+    def fs_alphabeta(self,move,stateBoard, spentTime,limitTime, alpha, beta, search_counter,player_max):
+        #from copy import copy
+        TOL = 0.1*limitTime
+        from time import time
+        startTime = time()
         copyState = stateBoard.get_clone()
         if search_counter:
             copyState.play(move, self.color)
 
         def debug_print():
-            if ~(len(copyState.valid_moves(self.color))) or depth == 0:
+            if ~(len(copyState.valid_moves(self.color))) or (spentTime+time()-startTime>=(limitTime-TOL)):
                 return
             return
 
@@ -74,35 +86,38 @@ class FirstMethodPlayer:
         debug_print()
         movesequence = []
 
+        child_movesequence = []
         if player_max: # MAX
             value = float('-inf')
             for move in stateBoard.valid_moves(self.color):
-                child_value, child_movesequence = self.fs_alphabeta(move,copyState, depth-1, alpha, beta,search_counter + 1,False)
+                child_value, child_movesequence = self.fs_alphabeta(move,copyState, spentTime+time()-startTime,limitTime, alpha, beta,search_counter + 1,False)
                 value = max(value, child_value)
 
                 if child_value >= alpha:
                     alpha = child_value
-                    #movesequence = copy(child_movesequence)
                     movesequence = [move]
-
+                if (spentTime + time() - startTime >= (limitTime - TOL)):
+                        return value, movesequence[0]
                 if beta <= alpha:
                     break
 
         else:  # player_min
             value = float('inf')
             for move in stateBoard.valid_moves(self.color):
-                child_value, child_movesequence = self.fs_alphabeta(move,copyState, depth - 1, alpha, beta, search_counter + 1, True)
+                child_value, child_movesequence = self.fs_alphabeta(move,copyState, spentTime+time()-startTime,limitTime, alpha, beta, search_counter + 1, True)
                 value = min(value, child_value)
 
                 if child_value <= beta:
                     beta = child_value
-                    #movesequence = copy(child_movesequence)
                     movesequence = [move]
+                if (spentTime + time() - startTime >= (limitTime - TOL)):
+                    return value, movesequence[0]
 
                 if beta <= alpha:
                     break
 
         debug_print()
+
         return value, movesequence[0]
 
 
@@ -110,7 +125,14 @@ class FirstMethodPlayer:
         return self.chooseNextMove(board)
 
     def chooseNextMove(self, stateBoard):
-        #from models.move import Move
-        _, bestMove = self.fs_alphabeta(0,stateBoard,10, float('-inf'), float('inf'), 0, True)
-        #print bestMove
+        from time import time
+        corners = [[1, 1], [1, 8], [8, 1], [8, 8]]
+        for move in stateBoard.valid_moves(self.color):
+            if [move.x,move.y] in corners:
+                return move
+        start = time()
+        _, bestMove = self.fs_alphabeta(0,stateBoard,0,0.5, float('-inf'), float('inf'), 0, True)
+        spent = (time() - start)
+        print "TIME "
+        print spent
         return bestMove
